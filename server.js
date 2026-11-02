@@ -1,9 +1,10 @@
-import cors from "cors";
-import express from "express";
+import cors from "cors";  // чтобы разрешить браузеру общаться с сервером
+import express from "express"; // for å starte server 
 import { randomUUID } from "node:crypto";
-const app = express();
+const app = express(); //создаем само приложение (сервер)
 const meldinger = [];
 
+// правила безопасности, разрешаем фронтенду отправлять запросы на сервер
 const corsConfig = {
   origin: [
     "http://localhost:5173",
@@ -14,14 +15,14 @@ const corsConfig = {
 };
 
 app.use(cors(corsConfig));
-app.use(express.json()); // Må stå før rutene som leser req.body
+app.use(express.json()); // Må stå før rutene som leser req.body говорит серверу что-бы он использовал json
 
-// 1. GET: Отдает весь список сообщений клиенту
+// 1. GET: Отдает весь список сообщений клиенту когда он делает GET запрос
 app.get("/meldinger", (req, res) => {
   res.json(meldinger);
 });
 
-
+// 2. POST: Принимает сообщение от клиента и добавляет его в массив сообщений
 app.post("/meldinger", (req, res) => {
   const avsender = req.body?.avsender;
   const tekst = req.body?.tekst;
@@ -33,7 +34,7 @@ app.post("/meldinger", (req, res) => {
       beskjed: "Avsender og tekst må fylles ut."
     });
   }
-
+// Создаем объект сообщения 
   const melding = {
     id: randomUUID(),
     avsender: avsender.trim(),
@@ -41,7 +42,8 @@ app.post("/meldinger", (req, res) => {
     opprettet: new Date().toISOString()
   };
   
-  meldinger.push(melding);
+  meldinger.push(melding); // добавляем сообщение в массив сообщений
+
   console.log("Mottatt:", melding);
   res.status(201).json({
     beskjed: "Meldingen er mottatt!",
@@ -49,6 +51,6 @@ app.post("/meldinger", (req, res) => {
   });
 });
 
-app.listen(3000, "0.0.0.0", () => {
+app.listen(3000, "0.0.0.0", () => {   // запускаем сервер на порту 3000
   console.log("Serveren kjører på http://localhost:3000");
 });

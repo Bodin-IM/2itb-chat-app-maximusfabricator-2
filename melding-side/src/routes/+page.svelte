@@ -11,18 +11,18 @@
         let filter = $state("");
 
         let visMeldinger = $derived(
-            filter.trim()
+            filter.trim() //ниже тернарный оператор 
             ? meldinger.filter(m => m.avsender.toLowerCase().includes(filter.trim().toLowerCase()))
             : meldinger
         );
         
         async function hentMeldinger() { 
             try {
-                const svar = await fetch(`${API}/meldinger`);
-                if (!svar.ok) throw new Error(`HTTP ${svar.status}`);
+                const svar = await fetch(`${API}/meldinger`); // делает get запрос на сервер
+                if (!svar.ok) throw new Error(`HTTP ${svar.status}`); //если сервер вернул ошибку, то выбрасываем исключение
  
-                meldinger = await svar.json();
-                status = "Meldingene er hentet.";
+                meldinger = await svar.json(); //получаем json с сервера и присваиваем его переменной meldinger
+                status = "Meldingene er hentet."; //обновляем статус
             } catch (feil) {
                 status = `Kunne ikke hente: ${feil.message}`;
             }
@@ -32,11 +32,11 @@
             try {
                 const svar = await fetch(`${API}/meldinger`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json" }, //говорим серверу что отправляем данные в json
                     body: JSON.stringify({ avsender, tekst})
                 });
 
-                const data = await svar.json();
+                const data = await svar.json(); //сервер отправляет json, ждем await.svar.json() и присваиваем его переменной data
                 if (!svar.ok) throw new Error(data.beskjed);
 
                 status = data.beskjed;
