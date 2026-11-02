@@ -12,27 +12,15 @@ const corsConfig = {
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type"]
 };
+
 app.use(cors(corsConfig));
+app.use(express.json()); // Må stå før rutene som leser req.body
 
-// Må stå før rutene som leser req.body
-app.use(express.json());
-
-// Эндпоинт для get запросов на адрес /meldinger
+// 1. GET: Отдает весь список сообщений клиенту
 app.get("/meldinger", (req, res) => {
   res.json(meldinger);
 });
 
-app.get("/meldinger", (req, res) => {
-  const avsender = req.query.avsender;
-  if (typeof avsender !== "string" || !avsender.trim()) {
-    return res.json(meldinger);
-  }
-  const utvalg = meldinger.filter(melding =>
-    melding.avsender.toLowerCase() ===
-    avsender.trim().toLowerCase()
-  );
-  res.json(utvalg);
-});
 
 app.post("/meldinger", (req, res) => {
   const avsender = req.body?.avsender;
@@ -41,23 +29,10 @@ app.post("/meldinger", (req, res) => {
   if (typeof avsender !== "string" ||
     typeof tekst !== "string" ||
     !avsender.trim() || !tekst.trim()) {
-    return res.status(400).json({
+  return res.status(400).json({
       beskjed: "Avsender og tekst må fylles ut."
     });
   }
-  app.get("/meldinger/:avsender", (req, res) => {
-    const filtrerteMeldinger = meldinger.filter(
-      melding => melding.avsender.toLowerCase() === req.params.avsender.toLowerCase()
-    );
-
-    if (filtrerteMeldinger.length === 0) {
-      return res.status(404).json({
-        beskjed: "Fant ikke avsenderen."
-      });
-    }
-
-    res.json(filtrerteMeldinger);
-  });
 
   const melding = {
     id: randomUUID(),
@@ -65,6 +40,7 @@ app.post("/meldinger", (req, res) => {
     tekst: tekst.trim(),
     opprettet: new Date().toISOString()
   };
+  
   meldinger.push(melding);
   console.log("Mottatt:", melding);
   res.status(201).json({

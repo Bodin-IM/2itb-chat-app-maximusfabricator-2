@@ -1,109 +1,110 @@
+        <script>
 
-<script>
+        import { onMount } from "svelte";
 
-import { onMount } from "svelte";
+        const API = "http://localhost:3000";
 
-const API = "http://10.100.0.162:3000";
+        let avsender = $state("");
+        let tekst = $state("");
+        let meldinger = $state([]);
+        let status = $state("");
+        let filter = $state("");
 
-  let avsender = $state("");
-  let tekst = $state("");
-  let meldinger = $state([]);
-  let status = $state("");
-  let filter = $state("");
+        let visMeldinger = $derived(
+            filter.trim()
+            ? meldinger.filter(m => m.avsender.toLowerCase().includes(filter.trim().toLowerCase()))
+            : meldinger
+        );
+        
+        async function hentMeldinger() { 
+            try {
+                const svar = await fetch(`${API}/meldinger`);
+                if (!svar.ok) throw new Error(`HTTP ${svar.status}`);
+ 
+                meldinger = await svar.json();
+                status = "Meldingene er hentet.";
+            } catch (feil) {
+                status = `Kunne ikke hente: ${feil.message}`;
+            }
+        }
 
-  async function hentMeldinger() { 
-      try {
-          let url = `${API}/meldinger`
-          if (filter.trim()){
-            url += `?avsender=${encodeURIComponent(filter)}`;
-          }
-          const svar = await fetch(url);
-          if (!svar.ok) throw new Error(`HTTP ${svar.status}`);
+        async function sendMelding() {
+            try {
+                const svar = await fetch(`${API}/meldinger`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ avsender, tekst})
+                });
 
-          meldinger = await svar.json();
-          status = "Meldingene er hentet.";
-      } catch (feil) {
-          status = `Kunne ikke hente: ${feil.message}`;
-      }
-      console.log(meldinger)
-  }
+                const data = await svar.json();
+                if (!svar.ok) throw new Error(data.beskjed);
 
-  async function sendMelding() {
-      try {
-          const svar = await fetch(`${API}/meldinger`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ avsender, tekst})
-          });
+                status = data.beskjed;
+                tekst = "";
+                hentMeldinger();
+            } catch (feil) {
+                status = `Kunne ikke sende: ${feil.message}`;
+            }
+        };
 
-          const data = await svar.json();
-          if (!svar.ok) throw new Error(data.beskjed);
+        // Функция-помощник прямо в скрипте
 
-          status = data.beskjed;
-          tekst = "";
-      } catch (feil) {
-          status = `Kunne ikke sende: ${feil.message}`;
-      }
-  };
+        function formatereTid(isoString) {
+            return new Date(isoString).toLocaleTimeString('no-NO', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
 
-  // Функция-помощник прямо в скрипте
+            //функция hentMeldinger() с интервалом, что-бы каждый раз не жать кнопку и обновлять страницу ЭТО Я КОММЕНТ ПИСАЛ КЛЯНУСЬ
+            onMount(() => {
+                hentMeldinger();
+                const interval = setInterval(hentMeldinger, 3000);
+                return () => clearInterval(interval);
+            });
+        </script>
 
-  function formatereTid(isoString) {
-    return new Date(isoString).toLocaleTimeString('no-NO', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-  }
+        <h1>Meldinger</h1>
 
-  //чистая функция чтобы не вызывать 2 в одной onclick
-    function handleButtonClick() {
-        sendMelding()
-        hentMeldinger()
-    }
-    //функция hentMeldinger() с интервалом, что-бы каждый раз не жать кнопку и обновлять страницу ЭТО Я КОММЕНТ ПИСАЛ КЛЯНУСЬ
-    onMount(() => {
-        hentMeldinger();
-        const interval = setInterval(hentMeldinger, 3000);
-        return () => clearInterval(interval);
-    });
-</script>
+        <div id="filter">
+            <label>
+            Filtrer etter avsender
+            <input bind:value={filter} />
+            </label>
+        </div>
 
-<h1>Meldinger</h1>
+        <label>
+            Avsender
+            <input bind:value={avsender} />
+        </label>
+        
+        <label>
+            Melding
+            <input bind:value={tekst} />
+        </label>
 
-<label>
-  Filtrer etter avsender
-  <input bind:value={filter} />
-</label>
+        <button disabled={!avsender.trim() || !tekst.trim()} onclick={sendMelding}>Send melding</button>
 
-<label>
-  Avsender
-  <input bind:value={avsender} />
-</label>
+        <p>{status}</p>
 
-<label>
-  Melding
-  <input bind:value={tekst} />
-</label>
+        {#each visMeldinger as melding}
+        <div id="melding">
+            <h4><strong>{melding.avsender}:</strong>{melding.tekst}</h4>
+            <p id="tid">{formatereTid(melding.opprettet)}</p>
+        </div>
+        {/each}
 
-<button disabled={!avsender.trim() || !tekst.trim()} onclick={handleButtonClick}>Send melding</button>
+        <style>
+            #melding{
+                padding: 10px;
+                margin-bottom: 10px;
+            }
 
-<p>{status}</p>
-
-{#each meldinger as melding}
-  <div id="melding">
-    <h4><strong>{melding.avsender}:</strong>{melding.tekst}</h4>
-    <p id="tid">{formatereTid(melding.opprettet)}</p>
-  </div>
-{/each}
-
-<style>
-    #melding{
-        padding: 10px;
-        margin-bottom: 10px;
-    }
-
-    #tid {
-        font-size: 0.8rem;
-        color: gray;
-    }
-</style>
+            #tid {
+                font-size: 0.8rem;
+                color: gray;
+            }
+            #filter{
+                margin-bottom: 30px;
+            }
+        </style>
