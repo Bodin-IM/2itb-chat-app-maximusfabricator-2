@@ -3,7 +3,26 @@
         import { onMount } from "svelte";
 
         const API = "http://localhost:3000";
-
+        
+        async function loggInn(brukernavn, passord) {
+            try {
+                const svar = await fetch(`${API}/login`, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({brukernavn, passord})
+                });
+            } catch (feil) {
+                status = `Kunne ikke logge inn: ${feil.message}`;
+                throw feil;
+            }
+            status = "Logged inn.";
+            const data = await svar.json();
+            if (!svar.ok) throw new Error (data.feil);
+            return data.bruker;
+        }
+        let brukernavn = $state("");
+        let passord = $state("");
         let avsender = $state("");
         let tekst = $state("");
         let meldinger = $state([]);
@@ -18,7 +37,10 @@
         
         async function hentMeldinger() { 
             try {
-                const svar = await fetch(`${API}/meldinger`); // делает get запрос на сервер
+                const svar = await fetch(`${API}/meldinger`, {
+                    credentials:"include"
+                }); // делает get запрос на сервер
+                
                 if (!svar.ok) throw new Error(`HTTP ${svar.status}`); //если сервер вернул ошибку, то выбрасываем исключение
  
                 meldinger = await svar.json(); //получаем json с сервера и присваиваем его переменной meldinger
@@ -32,6 +54,7 @@
             try {
                 const svar = await fetch(`${API}/meldinger`, {
                     method: "POST",
+                    credentials: "include",
                     headers: { "Content-Type": "application/json" }, //говорим серверу что отправляем данные в json
                     body: JSON.stringify({ avsender, tekst})
                 });
@@ -65,6 +88,19 @@
         </script>
 
         <h1>Meldinger</h1>
+        <div id="loginn">
+            <label>
+                Brukernavn
+                <input bind:value={brukernavn} />
+            </label>
+
+            <label>
+                Passord
+                <input bind:value={passord} />
+            </label>
+
+            <button onclick={() => loggInn(brukernavn, passord)}>Logg Inn</button>
+        </div>
 
         <div id="filter">
             <label>
@@ -72,11 +108,6 @@
             <input bind:value={filter} />
             </label>
         </div>
-
-        <label>
-            Avsender
-            <input bind:value={avsender} />
-        </label>
         
         <label>
             Melding
@@ -106,5 +137,9 @@
             }
             #filter{
                 margin-bottom: 30px;
+            }
+            #loginn{
+                padding:10px;
+                margin-bottom: 10px;
             }
         </style>
